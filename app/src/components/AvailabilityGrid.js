@@ -91,6 +91,36 @@ class AvailabilityGrid extends HTMLElement {
 
     const grid = this.shadowRoot.getElementById('slot-grid')
     if (grid) grid.addEventListener('click', this._handleClick)
+    const dateInput = this.shadowRoot.getElementById('date-input')
+    if (dateInput) {
+      dateInput.addEventListener('change', (e) => {
+        const date = e.target.value
+        this.dispatchEvent(new CustomEvent('date-change', {
+          detail: { date },
+          bubbles: true,
+          composed: true
+        }))
+      })
+    }
+    const clearBtn = this.shadowRoot.getElementById('clear-selection')
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.clearSelection()
+        this.dispatchEvent(new CustomEvent('clear-selection', {
+          bubbles: true,
+          composed: true
+        }))
+      })
+    }
+    const saveBtn = this.shadowRoot.getElementById('save-availability')
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        this.dispatchEvent(new CustomEvent('save-selection', {
+          bubbles: true,
+          composed: true
+        }))
+      })
+    }
   }
 
   _handleClick(e) {

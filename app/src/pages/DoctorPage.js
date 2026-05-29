@@ -194,20 +194,8 @@ class DoctorPage extends HTMLElement {
   _bindEvents(medicoId) {
     const grid = this.shadowRoot.getElementById('availability-grid')
     if (!grid) return
-    const dateInput = grid.shadowRoot.getElementById('date-input')
-    const clearBtn = grid.shadowRoot.getElementById('clear-selection')
-    const saveBtn = grid.shadowRoot.getElementById('save-availability')
     const confirmDialog = this.shadowRoot.getElementById('confirm-dialog')
     const logoutBtn = this.shadowRoot.getElementById('logout-btn')
-
-    if (dateInput) {
-      dateInput.addEventListener('change', (e) => {
-        this.selectedDate = e.target.value
-        this.pendingAdd.clear()
-        this.pendingRemove.clear()
-        this.render()
-      })
-    }
 
     grid.addEventListener('slot-toggle', (e) => {
       const { hora, action, selected } = e.detail
@@ -220,46 +208,49 @@ class DoctorPage extends HTMLElement {
       }
     })
 
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        this.pendingAdd.clear()
-        this.pendingRemove.clear()
-        grid.clearSelection()
+    grid.addEventListener('date-change', (e) => {
+      this.selectedDate = e.detail.date
+      this.pendingAdd.clear()
+      this.pendingRemove.clear()
+      this.render()
+    })
+
+    grid.addEventListener('clear-selection', () => {
+      this.pendingAdd.clear()
+      this.pendingRemove.clear()
+      grid.clearSelection()
+    })
+
+    grid.addEventListener('save-selection', async () => {
+      const horasAdd = Array.from(this.pendingAdd)
+      const horasRemove = Array.from(this.pendingRemove)
+      if (!horasAdd.length && !horasRemove.length) return
+
+      const message = `Vas a agregar ${horasAdd.length} bloque(s) y quitar ${horasRemove.length} bloque(s). ¿Deseas continuar?`
+      const ok = await confirmDialog.open({
+        title: 'Confirmar cambios',
+        message
       })
-    }
+      if (!ok) return
 
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async () => {
-        const horasAdd = Array.from(this.pendingAdd)
-        const horasRemove = Array.from(this.pendingRemove)
-        if (!horasAdd.length && !horasRemove.length) return
-
-        const message = `Vas a agregar ${horasAdd.length} bloque(s) y quitar ${horasRemove.length} bloque(s). ¿Deseas continuar?`
-        const ok = await confirmDialog.open({
-          title: 'Confirmar cambios',
-          message
+      if (horasAdd.length) {
+        CitaService.medicoDeclaraDisponibilidad({
+          medicoId,
+          fecha: this.selectedDate,
+          horas: horasAdd
         })
-        if (!ok) return
-
-        if (horasAdd.length) {
-          CitaService.medicoDeclaraDisponibilidad({
-            medicoId,
-            fecha: this.selectedDate,
-            horas: horasAdd
-          })
-        }
-        horasRemove.forEach(hora => {
-          CitaService.medicoDeshabilitaBloque({
-            medicoId,
-            fecha: this.selectedDate,
-            hora
-          })
+      }
+      horasRemove.forEach(hora => {
+        CitaService.medicoDeshabilitaBloque({
+          medicoId,
+          fecha: this.selectedDate,
+          hora
         })
-        this.pendingAdd.clear()
-        this.pendingRemove.clear()
-        this.render()
       })
-    }
+      this.pendingAdd.clear()
+      this.pendingRemove.clear()
+      this.render()
+    })
 
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
